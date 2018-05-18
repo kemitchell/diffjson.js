@@ -1,0 +1,17 @@
+{
+  "name": "diffjson",
+  "version": "0.0.0",
+  "description": "diff arbitrary JSON data",
+  "author": "Kyle E. Mitchell <kyle@kemitchell.com> (https://kemitchell.com/)",
+  "repository": "kemitchell/diffjson.js",
+  "dependencies": {
+    "crgmw-diff": "^1.0.1",
+    "jsonolt": "github:kemitchell/jsonolt.js#key-nodes"
+  },
+  "devDependencies": {
+    "tape": "^4.9.0"
+  },
+  "scripts": {
+    "test": "tape test/**.test.js"
+  }
+}
