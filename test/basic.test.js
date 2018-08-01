@@ -18,7 +18,7 @@ Object.keys(identical).forEach(function (key) {
   })
 })
 
-tape.only('one property', function (t) {
+tape('one property', function (t) {
   var a = {a: 1}
   var b = {a: 2}
   var result = diffjson(a, b)
