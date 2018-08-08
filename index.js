@@ -1,88 +1,174 @@
 var diff = require('crgmw-diff')
 var jsonolt = require('jsonolt')
 
-module.exports = function (a, b) {
-  var aTree = jsonolt.encode(a)
-  var bTree = jsonolt.encode(b)
-  var result = diff(aTree, bTree)
-  return postprocess(result)
+module.exports = function (before, after) {
+  // Step 1: Encode values as ordered, labeled trees.
+  var beforeOLT = jsonolt.encode(before)
+  var afterOLT = jsonolt.encode(after)
+
+  // Step 2: Diff the OLTs.
+  var result = diff(beforeOLT, afterOLT)
+
+  // Step 3: Convert crgmw-diff operations to RFC 6902 operations.
+  return convertEditOperations(result)
 }
 
-function postprocess (result) {
-  return detectReplacements(
-    mapOLTOperations(
-      result.editScript
+// jsonolt nodes have one of eight types:
+//
+// 1. Value Types: null, number, string, boolean
+// 2. Composite Types: array, object
+// 3. Member Types: index (arrays), key (objects)
+
+var INDEX = 'index'
+var KEY = 'key'
+
+function valueOfNode (node) {
+  var label = node.label
+  var type = label.type
+  if (type === INDEX || type === KEY) {
+    throw new Error(
+      'no value for node of type ' +
+      JSON.stringify(type)
     )
-  )
+  }
+  if (type === 'object') return {}
+  if (type === 'array') return []
+  return label.value
 }
 
-function mapOLTOperations (editScript) {
+function convertEditOperations (result) {
+  var editScript = result.editScript
+  var dummyRoots = result.dummyRoots
   var returned = []
   editScript.forEach(function (element) {
     var operation = element.operation
     var node = element.node
-    var label
+    var label = node.label
+    var type = label.type
+
+    // crgmw-diff returns operations of four types:
+    //
+    // 1. insert (node, index)
+    // 2. delete (node)
+    // 3. update (node, value)
+    // 4. move (node, parent, index)
+    //
+    // In addition, crgmw-diff may or may not create dummy roots for the
+    // trees it diffs.
+
+    // RFC 6902 defines different operation types:
+    //
+    // 1. add (path, value)
+    // 2. remove (path)
+    // 3. replace (path, value)
+    // 4. move (path, value)
+    // 5. copy (from, path)
+    // 6. test (path, value)
+
     if (operation === 'insert') {
-      label = node.label
-      if (label.type === 'key') return
-      var parent = node.parent
-      var oltPath = pathOf(parent).concat(element.index)
+      // jsonolt encodes array elements and object
+      // properties as only children of index and key nodes,
+      // not direct children of array and object parents:
+      //
+      // - type: array
+      //   children:
+      //     - type: index
+      //       value: 0
+      //       children:
+      //         - type: string
+      //           value: 'x'
+      //
+      // - type: object
+      //   children:
+      //     - type: key
+      //       value: 'a'
+      //       children:
+      //         - type: number
+      //           value: 1
+      //
+      // When elements or properties get added, crgmw-diff
+      // edit scripts contain insert operations both for
+      // indexes and keys, and for element and property
+      // values.
+      //
+      // Ignore insert operations on indexes and keys. We
+      // will see insert operations for the _values_ at the
+      // new indexes and keys later in edit scripts.
+      if (type === INDEX) return
+      if (type === KEY) return
+
+      // crgmw-diff insert operations don't have parent
+      // properties. Rather, inserted nodes carry pointers
+      // to their new parents.
+      var nodeParent = node.parent
+      if (nodeParent.root) {
+        if (dummyRoots) {
+          returned.push({
+            op: 'replace',
+            path: [],
+            value: valueOfNode(node)
+          })
+        } else {
+          throw new Error('insert into root without dummy roots')
+        }
+        return
+      }
       returned.push({
-        operation: 'insert',
-        value: valueOf(node),
-        path: oltPathToJSONPath(oltPath)
+        op: 'add',
+        value: valueOfNode(node),
+        path: pathOfNode(node)
       })
     } else if (operation === 'delete') {
-      label = node.label
-      if (label.type === 'key') return
-      returned.push({
-        operation: 'delete',
-        path: element.node.path
-      })
+    } else if (operation === 'update') {
+    } else if (operation === 'move') {
+      // var parent = element.parent
     } else {
-      returned.push(element)
+      throw new Error('invalid operation: ' + JSON.stringify(operation))
     }
   })
-  return returned
+  return withReplacements(returned)
 }
 
-function detectReplacements (editScript) {
-  var insertions = []
-  var deletions = []
+// TODO: Consider extracting withReplacements to its own npm package.
+
+// Convert an RFC 6902 edit script into an equivalent edit
+// script with replace operations.
+function withReplacements (editScript) {
+  // Categorize operations in the edit script.
+  var adds = []
+  var removes = []
   var other = []
-  editScript.forEach(function (element) {
-    var operation = element.operation
-    if (operation === 'insert') insertions.push(element)
-    else if (operation === 'delete') deletions.push(element)
-    else other.push(element)
-  })
-  var returned = []
-  insertions.forEach(function (insertion) {
-    if (pathAmong(insertion, deletions)) {
-      returned.push({
-        operation: 'replace',
-        value: insertion.value,
-        path: insertion.path
-      })
-    } else {
-      returned.push(insertion)
-    }
-  })
-  deletions.forEach(function (deletion) {
-    if (!pathAmong(deletion, insertions)) returned.push(deletion)
+  editScript.forEach(function (element, index) {
+    var op = element.op
+    if (op === 'add') adds.push(index)
+    else if (op === 'remove') removes.push(index)
+    else other.push(index)
   })
 
-  return returned.concat(other)
+  // Replace eligible add operations with replace operations.
+  adds.forEach(function (addIndex) {
+    var add = editScript[addIndex]
+    console.log('%s is %j', 'add.path', add.path)
+    if (add.path.length !== 0 && pathAmong(add, removes)) {
+      editScript[addIndex] = {
+        op: 'replace',
+        value: add.value,
+        path: add.path
+      }
+    }
+  })
+
+  return editScript
 
   function pathAmong (element, array) {
     var path = element.path
     return array.some(function (otherElement) {
-      return sameArray(path, otherElement.path)
+      return isSameArray(path, otherElement.path)
     })
   }
 }
 
-function sameArray (a, b) {
+function isSameArray (a, b) {
   var aLength = a.length
   var bLength = b.length
   if (aLength !== bLength) return false
@@ -92,36 +178,24 @@ function sameArray (a, b) {
   return true
 }
 
-function pathOf (node, path) {
-  path = path || []
-  var parent = node.parent
-  if (parent) {
-    var label = node.label
-    var type = label.type
-    if (type === 'key') path.push(label.value)
-    else path.push(parent.children.indexOf(node))
-    return pathOf(parent, path)
-  } else {
-    path.reverse()
-    return path
-  }
+function pathOfNode (node) {
+  // Compute the JSON Path of an OLT node.
+  var keys = []
+  recurseKeys(node, keys)
+  // Since we recurse from children to parents, and JSON
+  // Paths start from the root, reverse our list of keys.
+  keys.reverse()
+  return keys
 }
 
-function valueOf (node) {
+// Helper function for pathOfNode that follows OLT node
+// parent pointers back to the root node, collecting object
+// keys and array indexes.
+function recurseKeys (node, keys) {
+  if (node.root) return keys
+  var parent = node.parent
   var label = node.label
   var type = label.type
-  if (type === 'object') return {}
-  if (type === 'array') return []
-  return label.value
-}
-
-function oltPathToJSONPath (oltPath) {
-  var returned = []
-  oltPath.slice(1).forEach(function (element, index, iterating) {
-    if (index === 0 || typeof iterating[index - 1] !== 'string') {
-      returned.unshift(element)
-    }
-  })
-  returned.reverse()
-  return returned
+  if (type === INDEX || type === KEY) keys.push(label.value)
+  return recurseKeys(parent, keys)
 }
