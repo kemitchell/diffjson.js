@@ -126,56 +126,7 @@ function convertEditOperations (result) {
       throw new Error('invalid operation: ' + JSON.stringify(operation))
     }
   })
-  return withReplacements(returned)
-}
-
-// TODO: Consider extracting withReplacements to its own npm package.
-
-// Convert an RFC 6902 edit script into an equivalent edit
-// script with replace operations.
-function withReplacements (editScript) {
-  // Categorize operations in the edit script.
-  var adds = []
-  var removes = []
-  var other = []
-  editScript.forEach(function (element, index) {
-    var op = element.op
-    if (op === 'add') adds.push(index)
-    else if (op === 'remove') removes.push(index)
-    else other.push(index)
-  })
-
-  // Replace eligible add operations with replace operations.
-  adds.forEach(function (addIndex) {
-    var add = editScript[addIndex]
-    console.log('%s is %j', 'add.path', add.path)
-    if (add.path.length !== 0 && pathAmong(add, removes)) {
-      editScript[addIndex] = {
-        op: 'replace',
-        value: add.value,
-        path: add.path
-      }
-    }
-  })
-
-  return editScript
-
-  function pathAmong (element, array) {
-    var path = element.path
-    return array.some(function (otherElement) {
-      return isSameArray(path, otherElement.path)
-    })
-  }
-}
-
-function isSameArray (a, b) {
-  var aLength = a.length
-  var bLength = b.length
-  if (aLength !== bLength) return false
-  for (var index = 0; index < a.length; index++) {
-    if (a[index] !== b[index]) return false
-  }
-  return true
+  return returned
 }
 
 function pathOfNode (node) {
