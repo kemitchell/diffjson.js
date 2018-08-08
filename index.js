@@ -117,6 +117,35 @@ function convertEditOperations (result) {
         path: pathOfNode(node)
       })
     } else if (operation === 'delete') {
+      // Only process delete operations on object keys and
+      // array elements.
+      if (type !== 'index' && type !== 'key') return
+      var path = pathOfNode(node)
+
+      // Ignore operations to delete roots.
+      if (path.length === 0) {
+        if (!dummyRoots) {
+          throw new Error('delete root without dummy roots')
+        } else return
+      }
+
+      var coveredByPrior = false
+      for (var index = 0; index < returned.length; index++) {
+        var prior = returned[index]
+        if (pathWithinPath(path, prior.path)) {
+          if (prior.op === 'remove') {
+            prior.path = path
+            coveredByPrior = true
+          } else if (prior.op === 'add') {
+            coveredByPrior = true
+          }
+        }
+      }
+      if (coveredByPrior) return
+      returned.push({
+        op: 'remove',
+        path: pathOfNode(node)
+      })
     } else if (operation === 'update') {
     } else if (operation === 'move') {
       // var parent = element.parent
@@ -147,4 +176,12 @@ function recurseKeys (node, keys) {
   var type = label.type
   if (type === 'index' || type === 'key') keys.push(label.value)
   recurseKeys(parent, keys)
+}
+
+function pathWithinPath (parent, child) {
+  if (child.length < parent.length) return false
+  for (var index = 0; index < parent.length; index++) {
+    if (parent[index] !== child[index]) return false
+  }
+  return true
 }

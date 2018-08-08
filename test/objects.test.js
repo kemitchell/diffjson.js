@@ -63,3 +63,42 @@ tape('null property to true', function (test) {
   ])
   test.end()
 })
+
+tape('delete number property', function (test) {
+  var before = {a: 1, b: 2}
+  var after = {a: 1}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'remove', path: ['b']}
+  ])
+  test.end()
+})
+
+tape('delete object property', function (test) {
+  var before = {a: 1, b: {}}
+  var after = {a: 1}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'remove', path: ['b']}
+  ])
+  test.end()
+})
+
+tape('delete nested property', function (test) {
+  var before = {a: 1, b: {c: 3}}
+  var after = {a: 1}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'remove', path: ['b']}
+  ])
+  test.end()
+})
+tape('delete object property', function (test) {
+  var before = {a: 1, b: {}}
+  var after = {a: 1}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'remove', path: ['b']}
+  ])
+  test.end()
+})

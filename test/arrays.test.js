@@ -12,7 +12,7 @@ tape('add one', function (t) {
   t.end()
 })
 
-tape.skip('delete one', function (t) {
+tape('delete one', function (t) {
   var result = diffjson(
     ['a', 'b', 'c'],
     ['a', 'c']
