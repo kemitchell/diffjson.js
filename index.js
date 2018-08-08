@@ -25,6 +25,7 @@ var KEY = 'key'
 function valueOfNode (node) {
   var label = node.label
   var type = label.type
+  /* istanbul ignore if */
   if (type === INDEX || type === KEY) {
     throw new Error(
       'no value for node of type ' +
