@@ -1,25 +1,6 @@
 var tape = require('tape')
 var diffjson = require('../')
 
-tape.skip('one property', function (t) {
-  var a = {a: 1}
-  var b = {a: 2}
-  var result = diffjson(a, b)
-  t.deepEqual(result, [
-    {
-      operation: 'replace',
-      path: [],
-      value: {}
-    },
-    {
-      operation: 'replace',
-      path: ['a'],
-      value: 2
-    }
-  ])
-  t.end()
-})
-
 tape('add object property', function (test) {
   var before = {a: 1}
   var after = {a: 1, b: 2}
