@@ -15,10 +15,10 @@ tape('add one', function (t) {
 tape('delete one', function (t) {
   var result = diffjson(
     ['a', 'b', 'c'],
-    ['a', 'c']
+    ['a', 'b']
   )
   t.deepEqual(result, [
-    {op: 'remove', path: [1]}
+    {op: 'remove', path: [2]}
   ])
   t.end()
 })
