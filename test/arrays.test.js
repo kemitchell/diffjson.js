@@ -1,7 +1,7 @@
 var tape = require('tape')
 var diffjson = require('../')
 
-tape('add one', function (t) {
+tape('push to array', function (t) {
   var result = diffjson(
     ['a', 'b'],
     ['a', 'b', 'c']
@@ -12,7 +12,7 @@ tape('add one', function (t) {
   t.end()
 })
 
-tape('delete one', function (t) {
+tape('pop from array', function (t) {
   var result = diffjson(
     ['a', 'b', 'c'],
     ['a', 'b']
