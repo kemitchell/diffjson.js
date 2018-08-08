@@ -19,14 +19,11 @@ module.exports = function (before, after) {
 // 2. Composite Types: array, object
 // 3. Member Types: index (arrays), key (objects)
 
-var INDEX = 'index'
-var KEY = 'key'
-
 function valueOfNode (node) {
   var label = node.label
   var type = label.type
   /* istanbul ignore if */
-  if (type === INDEX || type === KEY) {
+  if (type === 'index' || type === 'key') {
     throw new Error(
       'no value for node of type ' +
       JSON.stringify(type)
@@ -95,8 +92,8 @@ function convertEditOperations (result) {
       // Ignore insert operations on indexes and keys. We
       // will see insert operations for the _values_ at the
       // new indexes and keys later in edit scripts.
-      if (type === INDEX) return
-      if (type === KEY) return
+      if (type === 'index') return
+      if (type === 'key') return
 
       // crgmw-diff insert operations don't have parent
       // properties. Rather, inserted nodes carry pointers
@@ -148,6 +145,6 @@ function recurseKeys (node, keys) {
   var parent = node.parent
   var label = node.label
   var type = label.type
-  if (type === INDEX || type === KEY) keys.push(label.value)
+  if (type === 'index' || type === 'key') keys.push(label.value)
   recurseKeys(parent, keys)
 }
