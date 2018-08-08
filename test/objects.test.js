@@ -23,3 +23,43 @@ tape('add object property to empty object', function (test) {
   ])
   test.end()
 })
+
+tape('number property to string', function (test) {
+  var before = {a: 1, b: 2}
+  var after = {a: 1, b: '2'}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'add', path: ['b'], value: '2'}
+  ])
+  test.end()
+})
+
+tape('null property to string', function (test) {
+  var before = {a: 1, b: null}
+  var after = {a: 1, b: '2'}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'add', path: ['b'], value: '2'}
+  ])
+  test.end()
+})
+
+tape('null property to false', function (test) {
+  var before = {a: 1, b: null}
+  var after = {a: 1, b: false}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'add', path: ['b'], value: false}
+  ])
+  test.end()
+})
+
+tape('null property to true', function (test) {
+  var before = {a: 1, b: null}
+  var after = {a: 1, b: true}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'add', path: ['b'], value: true}
+  ])
+  test.end()
+})
