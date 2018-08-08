@@ -144,10 +144,10 @@ function pathOfNode (node) {
 // parent pointers back to the root node, collecting object
 // keys and array indexes.
 function recurseKeys (node, keys) {
-  if (node.root) return keys
+  if (node.root) return
   var parent = node.parent
   var label = node.label
   var type = label.type
   if (type === INDEX || type === KEY) keys.push(label.value)
-  return recurseKeys(parent, keys)
+  recurseKeys(parent, keys)
 }
