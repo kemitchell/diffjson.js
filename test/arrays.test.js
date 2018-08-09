@@ -22,3 +22,26 @@ tape('pop from array', function (t) {
   ])
   t.end()
 })
+
+tape('splice from array', function (t) {
+  var result = diffjson(
+    ['a', 'b', 'c'],
+    ['a', 'c']
+  )
+  t.deepEqual(result, [
+    {op: 'remove', path: [1]}
+  ])
+  t.end()
+})
+
+tape('splice from another array', function (t) {
+  var result = diffjson(
+    ['a', 'b', 'c', 'd', 'e', 'f'],
+    ['a', 'b', 'c', 'e']
+  )
+  t.deepEqual(result, [
+    {op: 'remove', path: [3]},
+    {op: 'remove', path: [5]}
+  ])
+  t.end()
+})

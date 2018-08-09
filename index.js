@@ -13,17 +13,17 @@ module.exports = function (before, after) {
   return convertEditOperations(result)
 }
 
-// jsonolt nodes have one of eight types:
+// jsonolt nodes have one of seven types:
 //
 // 1. Value Types: null, number, string, boolean
 // 2. Composite Types: array, object
-// 3. Member Types: index (arrays), key (objects)
+// 3. Member Type: key (objects)
 
 function valueOfNode (node) {
   var label = node.label
   var type = label.type
   /* istanbul ignore if */
-  if (type === 'index' || type === 'key') {
+  if (type === 'key') {
     throw new Error(
       'no value for node of type ' +
       JSON.stringify(type)
@@ -41,6 +41,7 @@ function convertEditOperations (result) {
   editScript.forEach(function (element) {
     var operation = element.operation
     var node = element.node
+    var nodeParent = node.parent
     var label = node.label
     var type = label.type
 
@@ -64,17 +65,8 @@ function convertEditOperations (result) {
     // 6. test (path, value)
 
     if (operation === 'insert') {
-      // jsonolt encodes array elements and object
-      // properties as only children of index and key nodes,
-      // not direct children of array and object parents:
-      //
-      // - type: array
-      //   children:
-      //     - type: index
-      //       value: 0
-      //       children:
-      //         - type: string
-      //           value: 'x'
+      // jsonolt encodes object properties as only children
+      // of key nodes:
       //
       // - type: object
       //   children:
@@ -84,29 +76,33 @@ function convertEditOperations (result) {
       //         - type: number
       //           value: 1
       //
-      // When elements or properties get added, crgmw-diff
-      // edit scripts contain insert operations both for
-      // indexes and keys, and for element and property
-      // values.
+      // When properties get added, crgmw-diff edit scripts
+      // contain insert operations both for keys and for
+      // their values.
       //
-      // Ignore insert operations on indexes and keys. We
-      // will see insert operations for the _values_ at the
-      // new indexes and keys later in edit scripts.
-      if (type === 'index') return
+      // Ignore insert operations on keys. We will see
+      // insert operations for the _values_ at the new keys
+      // later in edit scripts.
       if (type === 'key') return
 
       // crgmw-diff insert operations don't have parent
       // properties. Rather, inserted nodes carry pointers
       // to their new parents.
-      var nodeParent = node.parent
       if (nodeParent.root) {
+        if (nodeParent.label.type === 'array') {
+          returned.push({
+            op: 'add',
+            path: [element.index],
+            value: valueOfNode(node)
+          })
+        }
         if (dummyRoots) {
           returned.push({
             op: 'replace',
             path: [],
             value: valueOfNode(node)
           })
-        } else {
+        } else if (nodeParent.label.type !== 'array') {
           throw new Error('insert into root without dummy roots')
         }
         return
@@ -117,12 +113,15 @@ function convertEditOperations (result) {
         path: pathOfNode(node)
       })
     } else if (operation === 'delete') {
-      // Only process delete operations on object keys and
-      // array elements.
-      if (type !== 'index' && type !== 'key') return
-      var path = pathOfNode(node)
+      // Only process delete operations on array elements
+      // and object keys.
+      if (
+        !(nodeParent && nodeParent.label.type === 'array') &&
+        type !== 'key'
+      ) return
 
       // Ignore operations to delete roots.
+      var path = pathOfNode(node)
       if (path.length === 0) {
         if (!dummyRoots) {
           throw new Error('delete root without dummy roots')
@@ -147,6 +146,7 @@ function convertEditOperations (result) {
         path: pathOfNode(node)
       })
     } else if (operation === 'update') {
+      throw new Error('got update')
     } else if (operation === 'move') {
       // var parent = element.parent
     } else {
@@ -174,7 +174,12 @@ function recurseKeys (node, keys) {
   var parent = node.parent
   var label = node.label
   var type = label.type
-  if (type === 'index' || type === 'key') keys.push(label.value)
+  if (type === 'key') keys.push(label.value)
+  if (parent.label.type === 'array') {
+    var index = parent.children.indexOf(node)
+    index = node.path[node.path.length - 1]
+    keys.push(index)
+  }
   recurseKeys(parent, keys)
 }
 
