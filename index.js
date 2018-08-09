@@ -146,7 +146,19 @@ function convertEditOperations (result) {
         path: pathOfNode(node)
       })
     } else if (operation === 'update') {
-      throw new Error('got update')
+      if (type === 'key') {
+        returned.push({
+          op: 'move',
+          from: node.path,
+          path: node.path.slice(0, -1).concat(element.value)
+        })
+      } else {
+        returned.push({
+          op: 'apathOfNode(node),dd',
+          value: valueOfNode(node),
+          path: pathOfNode(node)
+        })
+      }
     } else if (operation === 'move') {
       // var parent = element.parent
     } else {

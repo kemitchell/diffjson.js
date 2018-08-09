@@ -24,6 +24,16 @@ tape('add object property to empty object', function (test) {
   test.end()
 })
 
+tape('string property to other string', function (test) {
+  var before = {a: 1, b: 'before'}
+  var after = {a: 1, b: 'after'}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'add', path: ['b'], value: 'after'}
+  ])
+  test.end()
+})
+
 tape('number property to string', function (test) {
   var before = {a: 1, b: 2}
   var after = {a: 1, b: '2'}
@@ -93,12 +103,23 @@ tape('delete nested property', function (test) {
   ])
   test.end()
 })
+
 tape('delete object property', function (test) {
   var before = {a: 1, b: {}}
   var after = {a: 1}
   var diff = diffjson(before, after)
   test.deepEqual(diff, [
     {op: 'remove', path: ['b']}
+  ])
+  test.end()
+})
+
+tape('rename object property', function (test) {
+  var before = {a: 1}
+  var after = {b: 1}
+  var diff = diffjson(before, after)
+  test.deepEqual(diff, [
+    {op: 'move', from: ['a'], path: ['b']}
   ])
   test.end()
 })

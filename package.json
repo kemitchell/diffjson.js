@@ -6,7 +6,7 @@
   "repository": "kemitchell/diffjson.js",
   "dependencies": {
     "crgmw-diff": "^2.1.4",
-    "jsonolt": "^5.0.0"
+    "jsonolt": "^5.1.0"
   },
   "devDependencies": {
     "istanbul": "^0.4.5",
