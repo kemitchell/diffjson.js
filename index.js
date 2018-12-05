@@ -13,27 +13,6 @@ module.exports = function (before, after) {
   return convertEditOperations(result)
 }
 
-// jsonolt nodes have one of seven types:
-//
-// 1. Value Types: null, number, string, boolean
-// 2. Composite Types: array, object
-// 3. Member Type: key (objects)
-
-function valueOfNode (node) {
-  var label = node.label
-  var type = label.type
-  /* istanbul ignore if */
-  if (type === 'key') {
-    throw new Error(
-      'no value for node of type ' +
-      JSON.stringify(type)
-    )
-  }
-  if (type === 'object') return {}
-  if (type === 'array') return []
-  return label.value
-}
-
 function convertEditOperations (result) {
   var editScript = result.editScript
   var dummyRoots = result.dummyRoots
@@ -166,6 +145,27 @@ function convertEditOperations (result) {
     }
   })
   return returned
+}
+
+// jsonolt nodes have one of seven types:
+//
+// 1. Value Types: null, number, string, boolean
+// 2. Composite Types: array, object
+// 3. Member Type: key (objects)
+
+function valueOfNode (node) {
+  var label = node.label
+  var type = label.type
+  /* istanbul ignore if */
+  if (type === 'key') {
+    throw new Error(
+      'no value for node of type ' +
+      JSON.stringify(type)
+    )
+  }
+  if (type === 'object') return {}
+  if (type === 'array') return []
+  return label.value
 }
 
 function pathOfNode (node) {
