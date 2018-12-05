@@ -12,6 +12,28 @@ tape('push to array', function (t) {
   t.end()
 })
 
+tape('push array into array', function (t) {
+  var result = diffjson(
+    ['a', 'b'],
+    ['a', 'b', []]
+  )
+  t.deepEqual(result, [
+    {op: 'add', path: [2], value: []}
+  ])
+  t.end()
+})
+
+tape.only('splice array into array', function (t) {
+  var result = diffjson(
+    ['a', 'b'],
+    ['a', [], 'b']
+  )
+  t.deepEqual(result, [
+    {op: 'add', path: [1], value: []}
+  ])
+  t.end()
+})
+
 tape('pop from array', function (t) {
   var result = diffjson(
     ['a', 'b', 'c'],
