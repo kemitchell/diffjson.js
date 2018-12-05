@@ -17,12 +17,13 @@ function convertEditOperations (result) {
   var editScript = result.editScript
   var dummyRoots = result.dummyRoots
   var returned = []
+
   editScript.forEach(function (element) {
     var operation = element.operation
     var node = element.node
-    var nodeParent = node.parent
     var label = node.label
     var type = label.type
+    var parent = node.parent
 
     // crgmw-diff returns operations of four types:
     //
@@ -43,6 +44,7 @@ function convertEditOperations (result) {
     // 5. copy (from, path)
     // 6. test (path, value)
 
+    // Process insert operations.
     if (operation === 'insert') {
       // jsonolt encodes object properties as only children
       // of key nodes:
@@ -67,8 +69,8 @@ function convertEditOperations (result) {
       // crgmw-diff insert operations don't have parent
       // properties. Rather, inserted nodes carry pointers
       // to their new parents.
-      if (nodeParent.root) {
-        if (nodeParent.label.type === 'array') {
+      if (parent.root) {
+        if (parent.label.type === 'array') {
           returned.push({
             op: 'add',
             path: [element.index],
@@ -81,7 +83,7 @@ function convertEditOperations (result) {
             path: [],
             value: valueOfNode(node)
           })
-        } else if (nodeParent.label.type !== 'array') {
+        } else if (parent.label.type !== 'array') {
           throw new Error('insert into root without dummy roots')
         }
         return
@@ -91,11 +93,13 @@ function convertEditOperations (result) {
         value: valueOfNode(node),
         path: pathOfNode(node)
       })
+
+    // Process delete operations.
     } else if (operation === 'delete') {
       // Only process delete operations on array elements
       // and object keys.
       if (
-        !(nodeParent && nodeParent.label.type === 'array') &&
+        !(parent && parent.label.type === 'array') &&
         type !== 'key'
       ) return
 
@@ -107,6 +111,9 @@ function convertEditOperations (result) {
         } else return
       }
 
+      // crgmw-diff returns multiple delete operations for deleted composites
+      // and their children. If a prior delete operation already covers
+      // this node, ignore the current delete operation.
       var coveredByPrior = false
       for (var index = 0; index < returned.length; index++) {
         var prior = returned[index]
@@ -124,6 +131,8 @@ function convertEditOperations (result) {
         op: 'remove',
         path: pathOfNode(node)
       })
+
+    // Process update operations.
     } else if (operation === 'update') {
       if (type === 'key') {
         returned.push({
@@ -138,6 +147,8 @@ function convertEditOperations (result) {
           path: pathOfNode(node)
         })
       }
+
+    // Process move operations.
     } else if (operation === 'move') {
       // var parent = element.parent
     } else {
